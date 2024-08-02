@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+const key = process.env.NEXT_PUBLIC_API_KEY;
 
 declare global {
   interface Window {
@@ -8,11 +10,20 @@ declare global {
   }
 }
 
+const generateContent = async (prompt: string) => {
+  const genAI = new GoogleGenerativeAI(key || "");
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  // console.log(process.env.NEXT_PUBLIC_API_KEY);
+  const result = await model.generateContent([prompt]);
+  return result.response.text();
+};
+
 export default function VoiceRec() {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingComplete, setRecordingComplete] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [transcripts, setTranscripts] = useState<string[]>([]);
+  const [generatedContent, setGeneratedContent] = useState("");
   const recognitionRef = useRef<any>(null);
 
   const startRecording = () => {
@@ -33,7 +44,7 @@ export default function VoiceRec() {
     };
 
     recognitionRef.current.onerror = (event: any) => {
-      console.error('Speech recognition error:', event.error);
+      console.error("Speech recognition error:", event.error);
       // Handle error display
     };
 
@@ -54,6 +65,7 @@ export default function VoiceRec() {
       setRecordingComplete(true);
       setTranscripts([...transcripts, transcript]);
       setTranscript("");
+      handleGenerateContent(transcript);
     }
   };
 
@@ -63,6 +75,15 @@ export default function VoiceRec() {
       startRecording();
     } else {
       stopRecording();
+    }
+  };
+
+  const handleGenerateContent = async (transcript: string) => {
+    try {
+      const content = await generateContent(transcript);
+      setGeneratedContent(content);
+    } catch (error) {
+      console.error("Error generating content:", error);
     }
   };
 
@@ -96,6 +117,11 @@ export default function VoiceRec() {
                 <p className="text-gray-300">{transcript}</p>
               </div>
             )}
+            {generatedContent && (
+              <div className="border border-gray-700 rounded-md p-4 bg-gray-800 mt-4">
+                <p className="text-gray-300">{generatedContent}</p>
+              </div>
+            )}
           </motion.div>
 
           <div className="flex justify-center mt-4">
@@ -103,7 +129,9 @@ export default function VoiceRec() {
               onClick={handleToggleRecording}
               className={`flex items-center justify-center ${
                 isRecording ? "bg-red-600" : "bg-blue-600"
-              } hover:${isRecording ? "bg-red-700" : "bg-blue-700"} rounded-full w-24 h-24 text-white font-bold text-xl shadow-lg transition-transform transform hover:scale-110`}
+              } hover:${
+                isRecording ? "bg-red-700" : "bg-blue-700"
+              } rounded-full w-24 h-24 text-white font-bold text-xl shadow-lg transition-transform transform hover:scale-110`}
             >
               {isRecording ? "STOP" : "START"}
             </button>
