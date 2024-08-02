@@ -19,12 +19,22 @@ export default function VoiceRec() {
   const startRecording = () => {
     setIsRecording(true);
     recognitionRef.current = new window.webkitSpeechRecognition();
-    recognitionRef.current.continuous = false;
-    recognitionRef.current.interimResults = false;
+    recognitionRef.current.continuous = true; 
+    recognitionRef.current.interimResults = true;
 
     recognitionRef.current.onresult = (event: any) => {
       const { transcript } = event.results[event.results.length - 1][0];
       setTranscript(transcript);
+    };
+
+    recognitionRef.current.onend = () => {
+      if (isRecording) {
+        recognitionRef.current.start(); 
+      }
+    };
+
+    recognitionRef.current.onerror = (event: any) => {
+      console.error('Speech recognition error:', event.error);
     };
 
     recognitionRef.current.start();
