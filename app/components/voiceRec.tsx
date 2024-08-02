@@ -45,7 +45,7 @@ export default function VoiceRec() {
       recognitionRef.current.stop();
       setRecordingComplete(true);
       setTranscripts([...transcripts, transcript]);
-      setTranscript(""); // Reset current transcript after recording
+      setTranscript("");
     }
   };
 
@@ -97,8 +97,7 @@ export default function VoiceRec() {
               <button
                 onClick={handleToggleRecording}
                 className="flex items-center justify-center bg-gray-700 hover:bg-gray-800 rounded-full w-20 h-20 focus:outline-none shadow-lg transition-transform transform hover:scale-110"
-              >
-              </button>
+              ></button>
             ) : (
               <button
                 onClick={handleToggleRecording}
