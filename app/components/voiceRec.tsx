@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 
 declare global {
@@ -17,78 +17,12 @@ export default function VoiceRec() {
   const [userName, setUserName] = useState<string | null>(null);
 
   const recognitionRef = useRef<any>(null);
-  const audioRef = useRef<HTMLCanvasElement>(null);
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const dataArrayRef = useRef<Uint8Array | null>(null);
-  const animationIdRef = useRef<number | null>(null);
-
-  const drawVisualizer = useCallback(() => {
-    if (
-      !audioCtxRef.current ||
-      !analyserRef.current ||
-      !audioRef.current ||
-      !dataArrayRef.current
-    ) {
-      return;
-    }
-
-    const canvas = audioRef.current;
-    const canvasCtx = canvas.getContext("2d");
-    const analyser = analyserRef.current;
-    const bufferLength = analyser.frequencyBinCount;
-    analyser.getByteTimeDomainData(dataArrayRef.current);
-
-    if (canvasCtx) {
-      canvasCtx.fillStyle = "rgb(33, 33, 33)";
-      canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
-      canvasCtx.lineWidth = 2;
-      canvasCtx.strokeStyle = "rgb(0, 255, 0)";
-      canvasCtx.beginPath();
-
-      const sliceWidth = (canvas.width * 1.0) / bufferLength;
-      let x = 0;
-
-      for (let i = 0; i < bufferLength; i++) {
-        const v = dataArrayRef.current[i] / 128.0;
-        const y = (v * canvas.height) / 2;
-
-        if (i === 0) {
-          canvasCtx.moveTo(x, y);
-        } else {
-          canvasCtx.lineTo(x, y);
-        }
-
-        x += sliceWidth;
-      }
-
-      canvasCtx.lineTo(canvas.width, canvas.height / 2);
-      canvasCtx.stroke();
-    }
-
-    animationIdRef.current = requestAnimationFrame(drawVisualizer);
-  }, []);
-
-  const startVisualizer = useCallback(
-    (stream: MediaStream) => {
-      audioCtxRef.current = new (window.AudioContext ||
-        window.webkitAudioContext)();
-      analyserRef.current = audioCtxRef.current.createAnalyser();
-      const source = audioCtxRef.current.createMediaStreamSource(stream);
-      source.connect(analyserRef.current);
-      analyserRef.current.fftSize = 2048;
-      const bufferLength = analyserRef.current.frequencyBinCount;
-      dataArrayRef.current = new Uint8Array(bufferLength);
-      drawVisualizer();
-    },
-    [drawVisualizer]
-  );
 
   const startRecording = () => {
     setIsRecording(true);
     recognitionRef.current = new window.webkitSpeechRecognition();
     recognitionRef.current.continuous = true;
-    recognitionRef.current.interimResults = true;
+    recognitionRef.current.interimResults = false;
 
     recognitionRef.current.onresult = (event: any) => {
       const { transcript } = event.results[event.results.length - 1][0];
@@ -96,8 +30,7 @@ export default function VoiceRec() {
       setTranscript(transcript);
     };
 
-    navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
-      startVisualizer(stream);
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(() => {
       recognitionRef.current.start();
     });
   };
@@ -114,12 +47,6 @@ export default function VoiceRec() {
       if (recognitionRef.current) {
         recognitionRef.current.stop();
       }
-      if (animationIdRef.current) {
-        cancelAnimationFrame(animationIdRef.current);
-      }
-      if (audioCtxRef.current) {
-        audioCtxRef.current.close();
-      }
     };
   }, []);
 
@@ -130,12 +57,6 @@ export default function VoiceRec() {
       const updatedTranscripts = [...transcripts, transcript];
       setTranscripts(updatedTranscripts);
       setTranscript("");
-    }
-    if (animationIdRef.current) {
-      cancelAnimationFrame(animationIdRef.current);
-    }
-    if (audioCtxRef.current) {
-      audioCtxRef.current.close();
     }
   };
 
@@ -200,10 +121,6 @@ export default function VoiceRec() {
                       <div className="rounded-full w-4 h-4 bg-white animate-pulse mt-4 md:mt-0" />
                     )}
                   </div>
-                  <canvas
-                    ref={audioRef}
-                    className="w-full h-32 border border-gray-600 rounded-md bg-gray-800"
-                  />
                   {transcript && (
                     <div className="border border-gray-600 rounded-md p-4 bg-gray-800 mt-4">
                       <p className="text-gray-300">{transcript}</p>
