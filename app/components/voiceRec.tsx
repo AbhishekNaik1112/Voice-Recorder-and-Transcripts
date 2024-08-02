@@ -22,7 +22,7 @@ export default function VoiceRec() {
     setIsRecording(true);
     recognitionRef.current = new window.webkitSpeechRecognition();
     recognitionRef.current.continuous = true;
-    recognitionRef.current.interimResults = false;
+    recognitionRef.current.interimResults = true;
 
     recognitionRef.current.onresult = (event: any) => {
       const { transcript } = event.results[event.results.length - 1][0];
