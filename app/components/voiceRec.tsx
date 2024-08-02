@@ -20,7 +20,7 @@ export default function VoiceRec() {
     setIsRecording(true);
     recognitionRef.current = new window.webkitSpeechRecognition();
     recognitionRef.current.continuous = true;
-    recognitionRef.current.interimResults = true;
+    recognitionRef.current.interimResults = false;
 
     recognitionRef.current.onresult = (event: any) => {
       const { transcript } = event.results[event.results.length - 1][0];
@@ -43,7 +43,7 @@ export default function VoiceRec() {
       recognitionRef.current.stop();
       setRecordingComplete(true);
       setTranscripts([...transcripts, transcript]);
-      setTranscript(""); // Reset current transcript after recording
+      setTranscript(""); 
     }
   };
 
