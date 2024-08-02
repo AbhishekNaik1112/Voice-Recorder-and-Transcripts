@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 
 declare global {
@@ -12,12 +12,68 @@ export default function VoiceRec() {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingComplete, setRecordingComplete] = useState(false);
   const [transcript, setTranscript] = useState("");
-  const [transcripts, setTranscripts] = useState<string[]>(() => {
-    const savedTranscripts = localStorage.getItem("transcripts");
-    return savedTranscripts ? JSON.parse(savedTranscripts) : [];
-  });
+  const [transcripts, setTranscripts] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState("record");
+  const [userName, setUserName] = useState<string | null>(null);
 
   const recognitionRef = useRef<any>(null);
+  const audioRef = useRef<HTMLCanvasElement>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const dataArrayRef = useRef<Uint8Array | null>(null);
+  const animationIdRef = useRef<number | null>(null);
+
+  const drawVisualizer = useCallback(() => {
+    if (!audioCtxRef.current || !analyserRef.current || !audioRef.current || !dataArrayRef.current) {
+      return;
+    }
+
+    const canvas = audioRef.current;
+    const canvasCtx = canvas.getContext("2d");
+    const analyser = analyserRef.current;
+    const bufferLength = analyser.frequencyBinCount;
+    analyser.getByteTimeDomainData(dataArrayRef.current);
+
+    if (canvasCtx) {
+      canvasCtx.fillStyle = "rgb(33, 33, 33)";
+      canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+      canvasCtx.lineWidth = 2;
+      canvasCtx.strokeStyle = "rgb(0, 255, 0)";
+      canvasCtx.beginPath();
+
+      const sliceWidth = (canvas.width * 1.0) / bufferLength;
+      let x = 0;
+
+      for (let i = 0; i < bufferLength; i++) {
+        const v = dataArrayRef.current[i] / 128.0;
+        const y = (v * canvas.height) / 2;
+
+        if (i === 0) {
+          canvasCtx.moveTo(x, y);
+        } else {
+          canvasCtx.lineTo(x, y);
+        }
+
+        x += sliceWidth;
+      }
+
+      canvasCtx.lineTo(canvas.width, canvas.height / 2);
+      canvasCtx.stroke();
+    }
+
+    animationIdRef.current = requestAnimationFrame(drawVisualizer);
+  }, []);
+
+  const startVisualizer = useCallback((stream: MediaStream) => {
+    audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    analyserRef.current = audioCtxRef.current.createAnalyser();
+    const source = audioCtxRef.current.createMediaStreamSource(stream);
+    source.connect(analyserRef.current);
+    analyserRef.current.fftSize = 2048;
+    const bufferLength = analyserRef.current.frequencyBinCount;
+    dataArrayRef.current = new Uint8Array(bufferLength);
+    drawVisualizer();
+  }, [drawVisualizer]);
 
   const startRecording = () => {
     setIsRecording(true);
@@ -31,13 +87,39 @@ export default function VoiceRec() {
       setTranscript(transcript);
     };
 
-    recognitionRef.current.start();
+    navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+      startVisualizer(stream);
+      recognitionRef.current.start();
+    });
   };
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedTranscripts = localStorage.getItem("transcripts");
+      if (savedTranscripts) {
+        setTranscripts(JSON.parse(savedTranscripts));
+      }
+      const savedName = localStorage.getItem("userName");
+      if (savedName) {
+        setUserName(savedName);
+      } else {
+        const name = prompt("Please enter your name:");
+        if (name) {
+          localStorage.setItem("userName", name);
+          setUserName(name);
+        }
+      }
+    }
+
     return () => {
       if (recognitionRef.current) {
         recognitionRef.current.stop();
+      }
+      if (animationIdRef.current) {
+        cancelAnimationFrame(animationIdRef.current);
+      }
+      if (audioCtxRef.current) {
+        audioCtxRef.current.close();
       }
     };
   }, []);
@@ -48,8 +130,16 @@ export default function VoiceRec() {
       setRecordingComplete(true);
       const updatedTranscripts = [...transcripts, transcript];
       setTranscripts(updatedTranscripts);
-      localStorage.setItem("transcripts", JSON.stringify(updatedTranscripts));
+      if (typeof window !== "undefined") {
+        localStorage.setItem("transcripts", JSON.stringify(updatedTranscripts));
+      }
       setTranscript("");
+    }
+    if (animationIdRef.current) {
+      cancelAnimationFrame(animationIdRef.current);
+    }
+    if (audioCtxRef.current) {
+      audioCtxRef.current.close();
     }
   };
 
@@ -63,61 +153,95 @@ export default function VoiceRec() {
   };
 
   return (
-    <div className="flex flex-col md:flex-row items-center justify-center h-screen w-full bg-black text-white p-4">
-      <div className="w-full md:w-3/4 md:pr-4">
-        {(isRecording || transcript) && (
-          <motion.div
-            className="w-full rounded-md border border-gray-700 p-6 bg-gray-900 shadow-lg"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <div className="flex justify-between items-center mb-4">
-              <div className="space-y-1">
-                <p className="text-lg font-medium">
-                  {recordingComplete ? "Recorded" : "Recording"}
-                </p>
-                <p className="text-sm text-gray-400">
-                  {recordingComplete
-                    ? "Thanks for talking."
-                    : "Start speaking..."}
-                </p>
-              </div>
-              {isRecording && (
-                <div className="rounded-full w-4 h-4 bg-white animate-pulse" />
-              )}
-            </div>
-            {transcript && (
-              <div className="border border-gray-600 rounded-md p-4 bg-gray-800">
-                <p className="text-gray-300">{transcript}</p>
-              </div>
-            )}
-          </motion.div>
-        )}
-
-        <div className="flex justify-center mt-10">
-          <button
-            onClick={handleToggleRecording}
-            className="flex items-center justify-center bg-gray-700 hover:bg-gray-800 rounded-full w-20 h-20 focus:outline-none shadow-lg transition-transform transform hover:scale-110"
-          >
-            <span className="text-white text-lg font-medium">
-              {isRecording ? "" : "SPEAK"}
-            </span>
-          </button>
-        </div>
-      </div>
-
-      <div className="w-full md:w-1/4 md:pl-4 md:border-l border-gray-700 mt-4 md:mt-0">
-        <h2 className="text-xl font-semibold mb-4">Transcripts</h2>
-        <div className="space-y-2">
-          {transcripts.map((item, index) => (
-            <div
-              key={index}
-              className="border border-gray-600 rounded-md p-2 bg-gray-900"
+    <div className="flex flex-col items-center justify-center min-h-screen w-full bg-gray-900 text-white p-4">
+      <div className="w-full max-w-4xl">
+        <div className="flex justify-between items-center mb-4">
+          {userName && <h1 className="text-2xl font-bold">Hi, {userName}!</h1>}
+          <div className="flex space-x-4">
+            <button
+              className={`px-4 py-2 rounded-t-md ${
+                activeTab === "record" ? "bg-gray-800" : "bg-gray-700"
+              }`}
+              onClick={() => setActiveTab("record")}
             >
-              <p className="text-gray-300">{item}</p>
+              Record
+            </button>
+            <button
+              className={`px-4 py-2 rounded-t-md ${
+                activeTab === "transcripts" ? "bg-gray-800" : "bg-gray-700"
+              }`}
+              onClick={() => setActiveTab("transcripts")}
+            >
+              Transcripts
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-gray-800 p-6 rounded-md shadow-lg">
+          {activeTab === "record" && (
+            <div>
+              {(isRecording || transcript) && (
+                <motion.div
+                  className="w-full rounded-md border border-gray-700 p-6 bg-gray-900 shadow-lg mb-4"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <div className="flex flex-col md:flex-row justify-between items-center mb-4">
+                    <div className="space-y-1">
+                      <p className="text-lg font-medium">
+                        {recordingComplete ? "Recorded" : "Recording"}
+                      </p>
+                      <p className="text-sm text-gray-400">
+                        {recordingComplete
+                          ? "Thanks for talking."
+                          : "Start speaking..."}
+                      </p>
+                    </div>
+                    {isRecording && (
+                      <div className="rounded-full w-4 h-4 bg-white animate-pulse mt-4 md:mt-0" />
+                    )}
+                  </div>
+                  <canvas
+                    ref={audioRef}
+                    className="w-full h-32 border border-gray-600 rounded-md bg-gray-800"
+                  />
+                  {transcript && (
+                    <div className="border border-gray-600 rounded-md p-4 bg-gray-800 mt-4">
+                      <p className="text-gray-300">{transcript}</p>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
+              <div className="flex justify-center mt-10">
+                <button
+                  onClick={handleToggleRecording}
+                  className="flex items-center justify-center bg-red-700 hover:bg-red-800 rounded-full w-20 h-20 focus:outline-none shadow-lg transition-transform transform hover:scale-110"
+                >
+                  <span className="text-white text-lg font-medium">
+                    {isRecording ? "STOP" : "SPEAK"}
+                  </span>
+                </button>
+              </div>
             </div>
-          ))}
+          )}
+
+          {activeTab === "transcripts" && (
+            <div>
+              <h2 className="text-xl font-semibold mb-4">Transcripts</h2>
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {transcripts.map((item, index) => (
+                  <div
+                    key={index}
+                    className="border border-gray-600 rounded-md p-2 bg-gray-900"
+                  >
+                    <p className="text-gray-300">{item}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
