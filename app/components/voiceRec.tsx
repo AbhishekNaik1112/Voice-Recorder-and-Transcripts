@@ -13,7 +13,6 @@ declare global {
 const generateContent = async (prompt: string) => {
   const genAI = new GoogleGenerativeAI(key || "");
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-  // console.log(process.env.NEXT_PUBLIC_API_KEY);
   const result = await model.generateContent([prompt]);
   return result.response.text();
 };
@@ -113,13 +112,13 @@ export default function VoiceRec() {
               )}
             </div>
             {transcript && (
-              <div className="border border-gray-700 rounded-md p-4 bg-gray-800">
+              <div className="border border-gray-700 rounded-md p-4 bg-gray-800 overflow-auto max-h-32">
                 <p className="text-gray-300">{transcript}</p>
               </div>
             )}
             {generatedContent && (
-              <div className="border border-gray-700 rounded-md p-4 bg-gray-800 mt-4">
-                <p className="text-gray-300">{generatedContent}</p>
+              <div className="border border-gray-700 rounded-md p-4 bg-gray-800 mt-4 overflow-auto max-h-96">
+                <p className="text-gray-300 whitespace-pre-line">{generatedContent}</p>
               </div>
             )}
           </motion.div>
@@ -140,7 +139,7 @@ export default function VoiceRec() {
 
         <div className="lg:w-1/4 bg-gray-800 text-white rounded-lg shadow-lg p-6">
           <h2 className="text-2xl font-semibold mb-4">Transcripts</h2>
-          <div className="space-y-2">
+          <div className="space-y-2 overflow-auto max-h-96">
             {transcripts.map((item, index) => (
               <div
                 key={index}
