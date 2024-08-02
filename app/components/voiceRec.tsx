@@ -13,8 +13,6 @@ export default function VoiceRec() {
   const [recordingComplete, setRecordingComplete] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [transcripts, setTranscripts] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState("record");
-  const [userName, setUserName] = useState<string | null>(null);
 
   const recognitionRef = useRef<any>(null);
 
@@ -26,21 +24,11 @@ export default function VoiceRec() {
 
     recognitionRef.current.onresult = (event: any) => {
       const { transcript } = event.results[event.results.length - 1][0];
-      console.log(event.results);
       setTranscript(transcript);
     };
 
-    navigator.mediaDevices.getUserMedia({ audio: true }).then(() => {
-      recognitionRef.current.start();
-    });
+    recognitionRef.current.start();
   };
-
-  useEffect(() => {
-    const name = prompt("Please enter your name:");
-    if (name) {
-      setUserName(name);
-    }
-  }, []);
 
   useEffect(() => {
     return () => {
@@ -54,9 +42,8 @@ export default function VoiceRec() {
     if (recognitionRef.current) {
       recognitionRef.current.stop();
       setRecordingComplete(true);
-      const updatedTranscripts = [...transcripts, transcript];
-      setTranscripts(updatedTranscripts);
-      setTranscript("");
+      setTranscripts([...transcripts, transcript]);
+      setTranscript(""); // Reset current transcript after recording
     }
   };
 
@@ -70,95 +57,61 @@ export default function VoiceRec() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen w-full bg-gray-900 text-white p-4 sm:p-6 md:p-8 lg:p-10">
-      <div className="w-full max-w-4xl">
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-4">
-          {userName && (
-            <h1 className="text-xl sm:text-2xl font-bold">Hi, {userName}!</h1>
-          )}
-          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
+    <div className="flex items-center justify-center h-screen w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
+      <div className="flex flex-col lg:flex-row w-full max-w-6xl mx-auto p-4 space-y-4 lg:space-y-0 lg:space-x-4">
+        <div className="flex-1 lg:w-3/4 bg-white text-gray-900 rounded-lg shadow-lg p-6 flex flex-col">
+          <motion.div
+            className="flex-1 bg-gray-900 text-white rounded-lg p-4 mb-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <div className="space-y-1">
+                <p className="text-xl font-semibold">
+                  {recordingComplete ? "Recording Complete" : "Recording"}
+                </p>
+                <p className="text-sm text-gray-300">
+                  {recordingComplete
+                    ? "Thanks for talking."
+                    : "Start speaking..."}
+                </p>
+              </div>
+              {isRecording && (
+                <div className="w-4 h-4 rounded-full bg-yellow-500 animate-pulse" />
+              )}
+            </div>
+            {transcript && (
+              <div className="border border-gray-700 rounded-md p-4 bg-gray-800">
+                <p className="text-gray-300">{transcript}</p>
+              </div>
+            )}
+          </motion.div>
+
+          <div className="flex justify-center mt-4">
             <button
-              className={`px-4 py-2 rounded-t-md ${
-                activeTab === "record" ? "bg-gray-800" : "bg-gray-700"
-              }`}
-              onClick={() => setActiveTab("record")}
+              onClick={handleToggleRecording}
+              className={`flex items-center justify-center ${
+                isRecording ? "bg-red-600" : "bg-blue-600"
+              } hover:${isRecording ? "bg-red-700" : "bg-blue-700"} rounded-full w-24 h-24 text-white font-bold text-xl shadow-lg transition-transform transform hover:scale-110`}
             >
-              Record
-            </button>
-            <button
-              className={`px-4 py-2 rounded-t-md ${
-                activeTab === "transcripts" ? "bg-gray-800" : "bg-gray-700"
-              }`}
-              onClick={() => setActiveTab("transcripts")}
-            >
-              Transcripts
+              {isRecording ? "STOP" : "START"}
             </button>
           </div>
         </div>
 
-        <div className="bg-gray-800 p-4 sm:p-6 md:p-8 lg:p-10 rounded-md shadow-lg">
-          {activeTab === "record" && (
-            <div>
-              {(isRecording || transcript) && (
-                <motion.div
-                  className="w-full rounded-md border border-gray-700 p-4 sm:p-6 md:p-8 lg:p-10 bg-gray-900 shadow-lg mb-4"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  <div className="flex flex-col md:flex-row justify-between items-center mb-4">
-                    <div className="space-y-1">
-                      <p className="text-base sm:text-lg md:text-xl font-medium">
-                        {recordingComplete ? "Recorded" : "Recording"}
-                      </p>
-                      <p className="text-sm sm:text-base text-gray-400">
-                        {recordingComplete
-                          ? "Thanks for talking."
-                          : "Start speaking..."}
-                      </p>
-                    </div>
-                    {isRecording && (
-                      <div className="rounded-full w-4 h-4 bg-white animate-pulse mt-4 md:mt-0" />
-                    )}
-                  </div>
-                  {transcript && (
-                    <div className="border border-gray-600 rounded-md p-4 bg-gray-800 mt-4">
-                      <p className="text-gray-300">{transcript}</p>
-                    </div>
-                  )}
-                </motion.div>
-              )}
-
-              <div className="flex justify-center mt-10">
-                <button
-                  onClick={handleToggleRecording}
-                  className="flex items-center justify-center bg-red-700 hover:bg-red-800 rounded-full w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 focus:outline-none shadow-lg transition-transform transform hover:scale-110"
-                >
-                  <span className="text-white text-sm sm:text-base md:text-lg lg:text-xl font-medium">
-                    {isRecording ? "STOP" : "SPEAK"}
-                  </span>
-                </button>
+        <div className="lg:w-1/4 bg-gray-800 text-white rounded-lg shadow-lg p-6">
+          <h2 className="text-2xl font-semibold mb-4">Transcripts</h2>
+          <div className="space-y-2">
+            {transcripts.map((item, index) => (
+              <div
+                key={index}
+                className="border border-gray-600 rounded-md p-2 bg-gray-900"
+              >
+                <p className="text-gray-300">{item}</p>
               </div>
-            </div>
-          )}
-
-          {activeTab === "transcripts" && (
-            <div>
-              <h2 className="text-lg sm:text-xl md:text-2xl font-semibold mb-4">
-                Transcripts
-              </h2>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {transcripts.map((item, index) => (
-                  <div
-                    key={index}
-                    className="border border-gray-600 rounded-md p-2 bg-gray-900"
-                  >
-                    <p className="text-gray-300">{item}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+            ))}
+          </div>
         </div>
       </div>
     </div>
