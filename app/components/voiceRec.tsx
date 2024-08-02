@@ -13,13 +13,12 @@ export default function VoiceRec() {
   const [recordingComplete, setRecordingComplete] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [transcripts, setTranscripts] = useState<string[]>([]);
-
   const recognitionRef = useRef<any>(null);
 
   const startRecording = () => {
     setIsRecording(true);
     recognitionRef.current = new window.webkitSpeechRecognition();
-    recognitionRef.current.continuous = true; 
+    recognitionRef.current.continuous = true;
     recognitionRef.current.interimResults = true;
 
     recognitionRef.current.onresult = (event: any) => {
@@ -29,12 +28,13 @@ export default function VoiceRec() {
 
     recognitionRef.current.onend = () => {
       if (isRecording) {
-        recognitionRef.current.start(); 
+        recognitionRef.current.start();
       }
     };
 
     recognitionRef.current.onerror = (event: any) => {
       console.error('Speech recognition error:', event.error);
+      // Handle error display
     };
 
     recognitionRef.current.start();
@@ -53,7 +53,7 @@ export default function VoiceRec() {
       recognitionRef.current.stop();
       setRecordingComplete(true);
       setTranscripts([...transcripts, transcript]);
-      setTranscript(""); 
+      setTranscript("");
     }
   };
 
