@@ -19,7 +19,7 @@ export default function VoiceRec() {
   const startRecording = () => {
     setIsRecording(true);
     recognitionRef.current = new window.webkitSpeechRecognition();
-    recognitionRef.current.continuous = true;
+    recognitionRef.current.continuous = false;
     recognitionRef.current.interimResults = false;
 
     recognitionRef.current.onresult = (event: any) => {
