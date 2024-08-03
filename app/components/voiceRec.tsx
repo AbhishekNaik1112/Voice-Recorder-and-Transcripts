@@ -87,7 +87,7 @@ export default function VoiceRec() {
   };
 
   return (
-    <div className="flex items-center justify-center h-screen w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
+    <div className="flex items-center justify-center h-screen w-full bg-gradient-to-r from-black via-white to-black text-white">
       <div className="flex flex-col lg:flex-row w-full max-w-6xl mx-auto p-4 space-y-4 lg:space-y-0 lg:space-x-4">
         <div className="flex-1 lg:w-3/4 bg-white text-gray-900 rounded-lg shadow-lg p-6 flex flex-col">
           <motion.div
