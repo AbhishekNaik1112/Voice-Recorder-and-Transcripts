@@ -1,7 +1,9 @@
 "use client";
+dotenv.config();
 import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import dotenv from "dotenv";
 const key = process.env.NEXT_PUBLIC_API_KEY;
 
 declare global {
@@ -118,7 +120,9 @@ export default function VoiceRec() {
             )}
             {generatedContent && (
               <div className="border border-gray-700 rounded-md p-4 bg-gray-800 mt-4 overflow-auto max-h-96">
-                <p className="text-gray-300 whitespace-pre-line">{generatedContent}</p>
+                <p className="text-gray-300 whitespace-pre-line">
+                  {generatedContent}
+                </p>
               </div>
             )}
           </motion.div>
